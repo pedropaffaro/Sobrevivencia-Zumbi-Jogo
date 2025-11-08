@@ -14,7 +14,7 @@
 #define ZUMBI_SPEED 350000 
 #define ALTURA 10
 #define LARGURA 20
-#define NUM_ZUMBIS 6
+#define NUM_ZUMBIS 8
 
 /* --- Estado compartilhado --- */
 // mapa de caracteres representando o mundo do jogo.
@@ -113,7 +113,7 @@ void inicializar_mapa()
         do {
             x = rand() % ALTURA;
             y = rand() % LARGURA;
-        } while (5 < abs(jogador_x - x) && 5 < abs(jogador_y - y));
+        } while (3 < abs(jogador_x - x) && 3 < abs(jogador_y - y));
         zumbis[i].x = x;
         zumbis[i].y = y;
         mapa[zumbis[i].x][zumbis[i].y] = 'Z';
@@ -314,52 +314,47 @@ void mover_jogador(char direcao)
 
 /* ------------- Funções para o zumbi ------------- */
 
-Zumbi manhattan_grid(Zumbi z){
-    int dx = jogador_x - z.x;
-    int dy = jogador_y - z.y;
+Zumbi manhattan_grid(Zumbi z) {
+    int dx, dy;
+    sem_wait(sem_state);  // protege leitura do jogador
+    dx = jogador_x - z.x;
+    dy = jogador_y - z.y;
+    sem_post(sem_state);
+
     int adx = abs(dx);
     int ady = abs(dy);
 
     int dist = adx + ady;
     int p_explore = 0;
-    if(dist >= 10) p_explore = 60;
-    else if(dist >= 4) p_explore = 30;
+    if (dist >= 10) p_explore = 60;
+    else if (dist >= 4) p_explore = 30;
     else p_explore = 10;
 
     int nx = z.x, ny = z.y;
 
-    // 1) tentativa de passo aleatório (exploração)
     if ((rand() % 100) < p_explore) {
+        // exploração aleatória
         int dir = rand() % 4;
         if (dir == 0 && nx > 0) nx--;
         else if (dir == 1 && nx < ALTURA - 1) nx++;
         else if (dir == 2 && ny > 0) ny--;
         else if (dir == 3 && ny < LARGURA - 1) ny++;
-    } else{
-        if (adx == ady) {
-            if (rand() % 2) {
-                z.x += (dx > 0) ? 1 : -1;
-            } else {
-                z.y += (dy > 0) ? 1 : -1;
-            }
-        } else if (adx > ady) {
-            // distância maior em x -> mover em x
-            z.x += (dx > 0) ? 1 : -1;
-        } else {
-            // distância maior em y -> mover em y
-            z.y += (dy > 0) ? 1 : -1;
-        }
+    } else {
+        // perseguição ao jogador
+        if (adx >= ady)
+            nx += (dx > 0) ? 1 : -1;
+        else
+            ny += (dy > 0) ? 1 : -1;
     }
 
-    
-
     // limites
-    if (z.x < 0) z.x = 0;
-    if (z.x >= ALTURA) z.x = ALTURA - 1;
-    if (z.y < 0) z.y = 0;
-    if (z.y >= LARGURA) z.y = LARGURA - 1;
+    if (nx < 0) nx = 0;
+    if (nx >= ALTURA) nx = ALTURA - 1;
+    if (ny < 0) ny = 0;
+    if (ny >= LARGURA) ny = LARGURA - 1;
 
-    return z;
+    Zumbi novo = { nx, ny };
+    return novo;
 }
 
 /* thread de cada zumbi: calcula movimento aleatório e atualiza o mapa.
