@@ -5,11 +5,13 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <time.h>
+#include <math.h>
 #include <semaphore.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
 
 /* --- Constantes do jogo --- */
+#define ZUMBI_SPEED 350000 
 #define ALTURA 10
 #define LARGURA 20
 #define NUM_ZUMBIS 6
@@ -111,7 +113,7 @@ void inicializar_mapa()
         do {
             x = rand() % ALTURA;
             y = rand() % LARGURA;
-        } while (x == jogador_x && y == jogador_y);
+        } while (5 < abs(jogador_x - x) && 5 < abs(jogador_y - y));
         zumbis[i].x = x;
         zumbis[i].y = y;
         mapa[zumbis[i].x][zumbis[i].y] = 'Z';
@@ -312,6 +314,54 @@ void mover_jogador(char direcao)
 
 /* ------------- Funções para o zumbi ------------- */
 
+Zumbi manhattan_grid(Zumbi z){
+    int dx = jogador_x - z.x;
+    int dy = jogador_y - z.y;
+    int adx = abs(dx);
+    int ady = abs(dy);
+
+    int dist = adx + ady;
+    int p_explore = 0;
+    if(dist >= 10) p_explore = 60;
+    else if(dist >= 4) p_explore = 30;
+    else p_explore = 10;
+
+    int nx = z.x, ny = z.y;
+
+    // 1) tentativa de passo aleatório (exploração)
+    if ((rand() % 100) < p_explore) {
+        int dir = rand() % 4;
+        if (dir == 0 && nx > 0) nx--;
+        else if (dir == 1 && nx < ALTURA - 1) nx++;
+        else if (dir == 2 && ny > 0) ny--;
+        else if (dir == 3 && ny < LARGURA - 1) ny++;
+    } else{
+        if (adx == ady) {
+            if (rand() % 2) {
+                z.x += (dx > 0) ? 1 : -1;
+            } else {
+                z.y += (dy > 0) ? 1 : -1;
+            }
+        } else if (adx > ady) {
+            // distância maior em x -> mover em x
+            z.x += (dx > 0) ? 1 : -1;
+        } else {
+            // distância maior em y -> mover em y
+            z.y += (dy > 0) ? 1 : -1;
+        }
+    }
+
+    
+
+    // limites
+    if (z.x < 0) z.x = 0;
+    if (z.x >= ALTURA) z.x = ALTURA - 1;
+    if (z.y < 0) z.y = 0;
+    if (z.y >= LARGURA) z.y = LARGURA - 1;
+
+    return z;
+}
+
 /* thread de cada zumbi: calcula movimento aleatório e atualiza o mapa.
    Observações sobre sincronização:
    - verifica game_over sob sem_state para terminar corretamente
@@ -334,17 +384,20 @@ void *thread_zumbi(void *arg)
         sem_post(sem_state);
 
         // escolhe direção aleatória
-        int nx = z->x, ny = z->y;
-        int dir = rand() % 4;
 
-        if (dir == 0 && nx > 0)
-            nx--;
-        if (dir == 1 && nx < ALTURA - 1)
-            nx++;
-        if (dir == 2 && ny > 0)
-            ny--;
-        if (dir == 3 && ny < LARGURA - 1)
-            ny++;
+
+        Zumbi aux = manhattan_grid(*z);
+        int nx = aux.x, ny = aux.y;
+        // int dir = rand() % 4;
+
+        // if (dir == 0 && nx > 0)
+        //     nx--;
+        // if (dir == 1 && nx < ALTURA - 1)
+        //     nx++;
+        // if (dir == 2 && ny > 0)
+        //     ny--;
+        // if (dir == 3 && ny < LARGURA - 1)
+        //     ny++;
 
         // checa colisão dentro de região crítica de estado
         sem_wait(sem_state);
@@ -360,10 +413,13 @@ void *thread_zumbi(void *arg)
         mapa[z->x][z->y] = 'Z';
         sem_post(sem_mapa);
 
-        usleep(300000); // pausa para controlar velocidade do zumbi
+        usleep(ZUMBI_SPEED); // pausa para controlar velocidade do zumbi
     }
     return NULL;
 }
+
+
+
 
 /* ------------- Thread de pontuação ------------- */
 
