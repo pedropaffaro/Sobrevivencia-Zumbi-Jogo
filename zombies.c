@@ -295,8 +295,13 @@ void mover_jogador(char direcao)
         }
     }
 
+    int invencivel_local;
+    sem_wait(sem_state);
+    invencivel_local = invencivel;
+    sem_post(sem_state);
+
     // se a célula tem zumbi e não estamos invencíveis -> game over
-    if (mapa[novo_x][novo_y] == 'Z' && !invencivel)
+    if (mapa[novo_x][novo_y] == 'Z' && !invencivel_local)
     {
         sem_wait(sem_state);
         game_over = 1; // alteração do estado global protegida por sem_state
