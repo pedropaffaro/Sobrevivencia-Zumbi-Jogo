@@ -1,3 +1,14 @@
+/*
+O jogo consiste de um mapa 2D (10 x 20) no qual um jogador deve se movimentar
+e evitar colidir com zumbis que andam pelo mapa. O jogador e o zumbi operam em
+tempo real, controlados por múltiplas threads operando cada elemento concorrentemente.
+
+@author: Alec Campos Aoki (15436800)
+@author: Gabriel Phelippe Prado (15453730)
+@author: Henrique Vieira Lima (15459372)
+@author: Pedro Augusto Ferraro Paffaro (15483380)
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
