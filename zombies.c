@@ -113,7 +113,7 @@ void inicializar_mapa()
         do {
             x = rand() % ALTURA;
             y = rand() % LARGURA;
-        } while (3 < abs(jogador_x - x) && 3 < abs(jogador_y - y));
+        } while (abs(jogador_x - x) < 3 || abs(jogador_y - y) < 3);
         zumbis[i].x = x;
         zumbis[i].y = y;
         mapa[zumbis[i].x][zumbis[i].y] = 'Z';
